@@ -5,3 +5,76 @@
     <input type="password" name="password" placeholder="Contraseña" required>
     <button type="submit">Iniciar sesión</button>
 </form>
+
+<!-- Nuevo formulario para registrar usuario -->
+<div>
+    <input type="password" id="testPassword" placeholder="Contraseña para el nuevo usuario" required>
+    
+    <!-- Dropdown para seleccionar el rol -->
+    <select id="userRole">
+        <option value="user">Usuario</option>
+        <option value="admin">Administrador</option>
+    </select>
+
+    <button id="registerUserBtn">Registrar Usuario</button>
+</div>
+
+<!-- Contenedor para la tabla con información del usuario registrado -->
+<div id="userInfoTableContainer"></div>
+
+<script>
+    document.getElementById('registerUserBtn').addEventListener('click', async () => {
+        try {
+            const password = document.getElementById('testPassword').value;
+            const role = document.getElementById('userRole').value;
+
+            if (!password) {
+                alert('Por favor, ingresa una contraseña.');
+                return;
+            }
+
+            const response = await fetch('/api/users/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: 'user_' + Date.now() + '@example.com', // Email único
+                    first_name: 'Random',
+                    last_name: 'User',
+                    age: Math.floor(Math.random() * 50) + 18,
+                    password, 
+                    role  // Se envía el rol seleccionado
+                })
+            });
+
+            if (!response.ok) throw new Error('Error al registrar el usuario');
+            const result = await response.json();
+
+            console.log('Respuesta del servidor:', result); // Verificar datos aquí
+            const user = result.user;
+
+            // Actualizar el DOM para mostrar los datos en la tabla
+            const container = document.getElementById('userInfoTableContainer');
+            container.innerHTML = `
+                <table border="1">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Apellido</th>
+                        <th>Email</th>
+                        <th>Edad</th>
+                        <th>Rol</th>
+                    </tr>
+                    <tr>
+                        <td>${user.first_name || 'N/A'}</td>
+                        <td>${user.last_name || 'N/A'}</td>
+                        <td>${user.email || 'N/A'}</td>
+                        <td>${user.age || 'N/A'}</td>
+                        <td>${user.role || 'N/A'}</td>
+                    </tr>
+                </table>
+            `;
+        } catch (error) {
+            console.error('Hubo un error:', error);
+            alert('Hubo un error al registrar el usuario');
+        }
+    });
+</script>

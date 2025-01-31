@@ -12,8 +12,17 @@ const cartsRouter = require('./routes/cartsRouter');
 const connectDB = require('./database');
 const Product = require('./models/Product');
 
+const {initializePassport} = require('./config/passport.config');
+const passport = require('passport');
+const cookieParser = require('cookie-parser');
+const { updatePasswords } = require('./utils/passwordUtils'); 
 const app = express();
 const PORT = 8080;
+
+//Configuro cookie parser y passport
+app.use(cookieParser());
+initializePassport()
+app.use(passport.initialize());
 
 // Conectar a la base de datos MongoDB
 connectDB();
@@ -47,12 +56,12 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Rutas de la API
 app.use('/api/products', productsRouter);
 app.use('/api/carts', cartsRouter);
-//app.use('/api/users', userRouter); // Aseguramos incluir userRouter
+app.use('/api/users', userRouter); // Aseguramos incluir userRouter
 //app.use('/session', sessionRouter);
 app.use('/api/login', sessionRouter);
 
 
-app.use('/', userRouter);
+//app.use('/', userRouter);
 
 // Ruta para renderizar la vista de productos en tiempo real
 app.get('/realtimeproducts', (req, res) => {
@@ -131,3 +140,25 @@ io.on('connection', async (socket) => {
 server.listen(PORT, () => {
     console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
 });
+
+
+// (async () => {
+//     try {
+//         // Conectar a la base de datos
+//         await connectDB();
+//         console.log('Conectado a la base de datos.');
+
+//         // Actualizar contraseñas una sola vez
+//         console.log('Iniciando actualización de contraseñas...');
+//         await updatePasswords(User);
+//         console.log('Actualización de contraseñas completada.');
+
+//         // Iniciar el servidor después de la actualización
+//         app.listen(PORT, () => {
+//             console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
+//         });
+//     } catch (error) {
+//         console.error('Error durante la inicialización:', error);
+//         process.exit(1); // Salir en caso de error crítico
+//     }
+// })();

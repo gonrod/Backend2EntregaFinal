@@ -19,6 +19,12 @@ const getFilteredProducts = async ({ limit, page, sort, query }) => {
   return { products, totalPages, pageNum, limitNum };
 };
 
+ const getCatalog = async (req, res) => {
+    const { limit = 10, page = 1, sort, query } = req.query;
+    res.render('realTimeProducts', { limit, page, sort, query });
+ }
+
+
 // Obtener productos con paginación, filtros y ordenamiento
 const getProducts = async (req, res) => {
   try {
@@ -123,12 +129,39 @@ const deleteAllProducts = async (req, res) => {
   }
 };
 
+// Renderiza la vista de catálogo para los usuarios
+const renderCatalog = async (req, res) => {
+  try {
+    const { limit, page, sort, query } = req.query;
+    const { products, totalPages, pageNum, limitNum } = await getFilteredProducts({ limit, page, sort, query });
+
+    res.render('catalog', {
+      products: products.map(product => product.toObject()),
+      totalPages,
+      prevPage: pageNum > 1 ? pageNum - 1 : null,
+      nextPage: pageNum < totalPages ? pageNum + 1 : null,
+      page: pageNum,
+      limit: limitNum,
+      sort,
+      query,
+      hasPrevPage: pageNum > 1,
+      hasNextPage: pageNum < totalPages,
+    });
+  } catch (error) {
+    console.error('Error al obtener productos:', error);
+    res.status(500).send('Error al cargar productos');
+  }
+};
+
+
 module.exports = {
+    renderCatalog,
     getProducts,
     getProductById,
     addProduct,
     updateProduct,
     deleteProduct,
     generateTestProducts,
-    deleteAllProducts
+    deleteAllProducts,
+    getCatalog
 };

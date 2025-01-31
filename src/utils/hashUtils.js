@@ -1,22 +1,35 @@
 const bcrypt = require('bcrypt');
-const path = require('path');
-const { fileURLToPath } = require('url');
 
-// Crear una constante llamada createHash
-// Es una función que recibe un password como argumento y genera:
-//   * Genera un salt (una cadena aleatoria de 10 caracteres)
-//   * Genera el hash del password usando el salt
-//   * Devuelve el hash del password
-const createHash = (password) => bcrypt.hashSync(password, bcrypt.genSaltSync(10));
+// Generar un hash para una contraseña (asíncrono)
+const createHash = async (password) => {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+};
 
-// Crea una constante llamada isValidPassword
-// La constante es una función que recibe un objeto user y un password como argumentos
-// Compara el password con el password hasheado almacenado en el objeto user
-// Devuelve true si el password coincide con el password hasheado, false en caso contrario
-const isValidPassword = (user, password) => bcrypt.compareSync(password, user.password);
+// Verificar si la contraseña es válida (asíncrono)
+const isValidPassword = async (password, hashedPassword) => {
+    return await bcrypt.compare(password, hashedPassword);
+};
+
+// Actualizar contraseñas para usuarios en la base de datos (opcional)
+const updatePasswords = async (UserModel) => {
+    try {
+        const users = await UserModel.find();
+
+        for (const user of users) {
+            if (!/^\$2[aby]\$/.test(user.password)) {
+                user.password = await createHash(user.password);
+                await user.save();
+                console.log(`Contraseña actualizada para el usuario: ${user.email}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error al actualizar contraseñas:', error);
+    }
+};
 
 module.exports = {
     createHash,
     isValidPassword,
-    __dirname,
+    updatePasswords,
 };
