@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Carrito</title>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
     {{> header}}
@@ -17,80 +16,98 @@
         <div id="cart-container">
             <ul class="cart-list">
                 {{#each cart.products}}
-                <li class="cart-item">
+                <li class="cart-item" id="cart-item-{{this.product._id}}">
                     <div class="cart-product-info">
                         <h3>{{this.product.title}}</h3>
                         <p>Precio: ${{this.product.price}}</p>
-                        <p>Cantidad: {{this.quantity}}</p>
+                        <p>Cantidad: <span class="quantity">{{this.quantity}}</span></p>
                         <button class="remove-from-cart-btn" data-product-id="{{this.product._id}}">Eliminar</button>
                     </div>
                 </li>
                 {{/each}}
             </ul>
         </div>
-        <button id="checkout-btn">Finalizar Compra</button>
+
+        <!-- Sección de Totales -->
+        <div id="cart-summary">
+            <hr>
+            <p><strong>Subtotal:</strong> <span id="subtotal"></span></p>
+            <p><strong>Total de productos:</strong> <span id="total-items"></span></p>
+            <button id="checkout-btn">Finalizar Compra</button>
+        </div>
     {{/if}}
 
     {{> footer}}
 
-    <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            let cartIcon = document.getElementById("cart-icon");
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        let cartIcon = document.getElementById("cart-icon");
 
-            const waitForCartId = async () => {
-                return new Promise(resolve => {
-                    const checkCartId = () => {
-                        const cartId = cartIcon.getAttribute("data-cart-id");
-                        if (cartId && cartId !== "undefined" && cartId !== "null") {
-                            console.log("✅ cartId detectado en carrito:", cartId);
-                            resolve(cartId);
-                        } else {
-                            setTimeout(checkCartId, 100);
-                        }
-                    };
-                    checkCartId();
-                });
-            };
-
-            let cartId = await waitForCartId();
-
-            if (!cartId) {
-                console.error("⚠️ No se pudo obtener el cartId del usuario.");
-                alert("Debes iniciar sesión para ver tu carrito.");
-                return;
-            }
-
-            // Manejar eventos de "Eliminar del carrito"
-            document.querySelectorAll(".remove-from-cart-btn").forEach(button => {
-                button.addEventListener("click", async (event) => {
-                    const productId = event.target.getAttribute("data-product-id");
-                    try {
-                        const response = await axios.delete(`/api/carts/${cartId}/product/${productId}`);
-                        if (response.status === 200) {
-                            alert("✅ Producto eliminado del carrito.");
-                            location.reload(); // Recargar la página para actualizar la vista
-                        }
-                    } catch (error) {
-                        console.error("❌ Error al eliminar producto:", error.response ? error.response.data : error);
-                        alert("No se pudo eliminar el producto del carrito.");
+        // Esperar hasta que `cartId` esté disponible
+        const waitForCartId = async () => {
+            return new Promise(resolve => {
+                const checkCartId = () => {
+                    const cartId = cartIcon.getAttribute("data-cart-id");
+                    if (cartId && cartId !== "undefined" && cartId !== "null") {
+                        console.log("✅ Cart ID obtenido:", cartId);
+                        resolve(cartId);
+                    } else {
+                        setTimeout(checkCartId, 100);
                     }
-                });
+                };
+                checkCartId();
             });
+        };
 
-            // Manejar el checkout
-            document.getElementById("checkout-btn").addEventListener("click", async () => {
+        let cartId = await waitForCartId();
+
+        if (!cartId) {
+            console.error("⚠️ No se pudo obtener el cartId del usuario.");
+            alert("Debes iniciar sesión para ver tu carrito.");
+            return;
+        }
+
+        const updateCartTotals = () => {
+            let subtotal = 0;
+            let totalItems = 0;
+            document.querySelectorAll(".cart-item").forEach(item => {
+                const price = parseFloat(item.querySelector("p:nth-of-type(1)").textContent.replace("Precio: $", ""));
+                const quantity = parseInt(item.querySelector(".quantity").textContent);
+                subtotal += price * quantity;
+                totalItems += quantity;
+            });
+            document.getElementById("subtotal").textContent = `$${subtotal.toFixed(2)}`;
+            document.getElementById("total-items").textContent = totalItems;
+        };
+
+        updateCartTotals();
+
+        // Manejar eventos de "Eliminar del carrito"
+        document.querySelectorAll(".remove-from-cart-btn").forEach(button => {
+            button.addEventListener("click", async (event) => {
+                const productId = event.target.getAttribute("data-product-id");
+
                 try {
-                    const response = await axios.post(`/api/carts/${cartId}/checkout`);
+                    const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+                        method: "DELETE",
+                        credentials: "include"
+                    });
+
                     if (response.status === 200) {
-                        alert("✅ Compra finalizada con éxito.");
-                        location.href = "/"; // Redirigir al inicio
+                        alert("✅ Producto eliminado del carrito.");
+                        document.getElementById(`cart-item-${productId}`).remove();
+                        updateCartTotals();
+                    } else {
+                        throw new Error("No se pudo eliminar el producto");
                     }
                 } catch (error) {
-                    console.error("❌ Error al finalizar compra:", error.response ? error.response.data : error);
-                    alert("No se pudo finalizar la compra.");
+                    console.error("❌ Error al eliminar producto:", error);
+                    alert("No se pudo eliminar el producto del carrito.");
                 }
             });
         });
-    </script>
+    });
+</script>
+
 </body>
 </html>

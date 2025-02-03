@@ -64,7 +64,11 @@ const getCartView = async (req, res) => {
           return res.render("cart", { cart: null, emptyCart: true });
       }
 
-      res.render("cart", { cart, emptyCart: false });
+      // Convertir cart a un objeto plano
+      const cartPlain = cart.toObject({ getters: true });
+
+
+      res.render("cart", { cart: cartPlain, emptyCart: false });
   } catch (error) {
       console.error("❌ Error al cargar carrito:", error);
       res.status(500).json({ error: "Error interno del servidor" });
@@ -95,18 +99,22 @@ const addProductToCart = async (req, res) => {
 
 // Eliminar un producto de un carrito
 const removeProductFromCart = async (req, res) => {
-    const { cid, pid } = req.params;
-    try {
-        const cart = await findCartById(cid, res);
-        if (!cart) return;
+  const { cid, pid } = req.params;
+  try {
+      const cart = await Cart.findById(cid);
+      if (!cart) return res.status(404).json({ error: "Carrito no encontrado" });
 
-        cart.products = cart.products.filter(p => p.product.toString() !== pid);
-        await cart.save();
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).json({ error: 'Error al eliminar producto del carrito' });
-    }
+      // Filtrar el producto a eliminar
+      cart.products = cart.products.filter(p => p.product.toString() !== pid);
+      await cart.save();
+
+      res.status(200).json({ message: "Producto eliminado", cart });
+  } catch (error) {
+      console.error("❌ Error al eliminar producto del carrito:", error);
+      res.status(500).json({ error: "Error al eliminar producto del carrito" });
+  }
 };
+
 
 const checkoutCart = async (req, res) => {
     try {
