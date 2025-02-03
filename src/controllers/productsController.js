@@ -1,4 +1,4 @@
-const Product = require('../models/Product');
+const Product = require('../dao/models/Product');
 
 // Función auxiliar para obtener los productos con filtros y paginación
 const getFilteredProducts = async ({ limit, page, sort, query }) => {

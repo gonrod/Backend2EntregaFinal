@@ -1,6 +1,7 @@
 const express = require('express');
 const passport = require('passport');
-
+const jwt = require("jsonwebtoken");
+const UserModel = require("../dao/models/User");
 
 const isLoggedIn = (req, res, next) => {
     if (req.session.user) {
@@ -18,15 +19,31 @@ const isLoggedOut = (req, res, next) => {
     }
 };
 
-const authenticateJWT = (req, res, next) => {
-    passport.authenticate('jwt', { session: false }, (err, user, info) => {
-        if (err) return next(err);
-        if (!user) return res.status(401).json({ message: "Unauthorized access" });
 
-        req.user = user; // Attach user info to the request
+const authenticateJWT = async (req, res, next) => {
+    try {
+        const token = req.cookies.tokenCookie;
+        if (!token) {
+            console.error("❌ No se encontró un token en las cookies.");
+            return res.redirect("/login"); // ✅ Redirigir a login si no hay token
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await UserModel.findById(decoded.id);
+        if (!user) {
+            console.error("❌ Usuario no encontrado en la base de datos.");
+            return res.redirect("/login"); // ✅ Redirigir si el usuario no existe
+        }
+
+        req.user = user;
         next();
-    })(req, res, next);
+    } catch (error) {
+        console.error("❌ Error en authenticateJWT:", error);
+        return res.redirect("/login"); // ✅ Redirigir si hay un error en el token
+    }
 };
+
+
 
 const isAdmin = (req, res, next) => {
     try {

@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const UserModel = require('../models/User');
+const UserModel = require('../dao/models/User');
 const { createHash } = require('../utils/hashUtils');
 
 const router = Router();

@@ -7,11 +7,13 @@ const { Schema } = mongoose;
 const userSchema = new Schema({
     first_name: { type: String, required: true, trim: true, maxlength: 50 },
     last_name: { type: String, required: true, trim: true, maxlength: 50 },
-    email: { type: String, required: true, unique: true, match: /.+\@.+\..+/ }, // El índice único ya está definido aquí
+    email: { type: String, required: true, unique: true, match: /.+\@.+\..+/ },
     age: { type: Number, required: true, min: 0 },
     password: { type: String, required: true },
-    cart: { type: Schema.Types.ObjectId, ref: 'Cart' }, // Referencia al carrito
-    role: { type: String, default: 'user' }, // Rol del usuario
+    cart: { type: Schema.Types.ObjectId, ref: 'Cart' },
+    role: { type: String, default: 'user' },
+    resetToken: String, // ✅ Nuevo campo para el token de recuperación
+    resetTokenExpiration: Date, // ✅ Nuevo campo para la expiración del token
 }, { timestamps: true });
 
 // Middleware para hashear la contraseña antes de guardar el usuario

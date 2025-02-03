@@ -5,162 +5,84 @@ const { create } = require('express-handlebars');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
-const userRouter = require('./routes/user.router'); // Cambiado para CommonJS
-const sessionRouter = require('./routes/session.router'); // Cambiado para CommonJS
-const productsRouter = require('./routes/productsRouter');
-const cartsRouter = require('./routes/cartsRouter');
 const connectDB = require('./database');
-const Product = require('./models/Product');
-
-const {initializePassport} = require('./config/passport.config');
 const passport = require('passport');
 const cookieParser = require('cookie-parser');
-const { updatePasswords } = require('./utils/passwordUtils'); 
+const { authenticateJWT } = require('./middlewares/auth');
+
+// Importar Rutas
+const userRouter = require('./routes/user.router');
+const sessionRouter = require('./routes/session.router');
+const productsRouter = require('./routes/productsRouter');
+const cartsRouter = require('./routes/cartsRouter');
+
+// Inicializar Express
 const app = express();
 const PORT = 8080;
 
-//Configuro cookie parser y passport
-app.use(cookieParser());
-initializePassport()
-app.use(passport.initialize());
-
-// Conectar a la base de datos MongoDB
+// Configurar Base de Datos
 connectDB();
 
-// Crear servidor HTTP y configuración de Socket.IO
-const server = http.createServer(app);
-const io = new Server(server);
-
-// Configuración de Handlebars
-const hbs = create({
-    extname: '.handlebars',
-    defaultLayout: 'main',
-    helpers: {
-        eq: (a, b) => a === b,
-    },
-});
-
-
-app.engine('handlebars', hbs.engine);
-app.set('view engine', 'handlebars');
-app.set('views', path.join(__dirname, 'views'));
-
-hbs.handlebars.registerPartial('header', path.join(__dirname, 'views/partials/header.handlebars'));
-
-// Middlewares
+// Configurar Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
+app.use(cookieParser());
 
-// Rutas de la API
+// Configurar Passport
+const { initializePassport } = require('./config/passport.config');
+initializePassport();
+app.use(passport.initialize());
+
+// Configurar Handlebars
+const hbs = create({
+    extname: '.handlebars',
+    defaultLayout: 'main',
+    helpers: { eq: (a, b) => a === b },
+});
+app.engine('handlebars', hbs.engine);
+app.set('view engine', 'handlebars');
+app.set('views', path.join(__dirname, 'views'));
+
+// Definir Rutas
 app.use('/api/carts', cartsRouter);
-app.use('/api/users', userRouter); // Aseguramos incluir userRouter
-//app.use('/session', sessionRouter);
-app.use('/api/login', sessionRouter);
+app.use('/api/users', userRouter);
+app.use('/api/sessions', sessionRouter);
+app.use('/api/products', productsRouter);
 
-//
-app.use('/catalog', productsRouter);
-
-
-//app.use('/', userRouter);
-
-// Ruta para renderizar la vista de productos en tiempo real
-app.get('/realtimeproducts', (req, res) => {
-    const { limit = 10, page = 1, sort, query } = req.query;
-    res.render('realTimeProducts', { limit, page, sort, query });
-});
-
-// Ruta para renderizar la vista de productos con paginación y filtros
-// app.get('/products', async (req, res) => {
-//     try {
-//         const { limit = 10, page = 1, sort, query } = req.query;
-//         const filter = query ? { category: query } : {};
-//         const sortOption = sort === 'asc' ? { price: 1 } : sort === 'desc' ? { price: -1 } : {};
-//         const limitNum = parseInt(limit, 10);
-//         const pageNum = parseInt(page, 10);
-
-//         const products = await Product.find(filter)
-//             .sort(sortOption)
-//             .skip((pageNum - 1) * limitNum)
-//             .limit(limitNum);
-
-//         const totalProducts = await Product.countDocuments(filter);
-//         const totalPages = Math.ceil(totalProducts / limitNum);
-
-//         res.render('index', {
-//             products: products.map(product => product.toObject()),
-//             totalPages,
-//             prevPage: pageNum > 1 ? pageNum - 1 : null,
-//             nextPage: pageNum < totalPages ? pageNum + 1 : null,
-//             page: pageNum,
-//             limit: limitNum,
-//             sort,
-//             query,
-//             hasPrevPage: pageNum > 1,
-//             hasNextPage: pageNum < totalPages,
-//         });
-//     } catch (error) {
-//         console.error('Error al obtener productos:', error);
-//         res.status(500).send('Error al cargar productos');
-//     }
-// });
-
-// Configuración de Socket.IO
-io.on('connection', async (socket) => {
-    console.log('Cliente conectado');
-    try {
-        const products = await Product.find();
-        socket.emit('productList', products);
-    } catch (error) {
-        console.error('Error al obtener productos de MongoDB:', error);
+// Redirección Automática en `/`
+app.get("/", authenticateJWT, (req, res) => {
+    if (!req.user) {
+        return res.redirect("/login"); // No autenticado → Redirigir a login
     }
-
-    socket.on('newProduct', async (product) => {
-        try {
-            const newProduct = new Product(product);
-            await newProduct.save();
-            const products = await Product.find();
-            io.emit('productList', products);
-        } catch (error) {
-            console.error('Error al agregar producto en MongoDB:', error);
-        }
-    });
-
-    socket.on('deleteProduct', async (productId) => {
-        try {
-            await Product.findByIdAndDelete(productId);
-            const products = await Product.find();
-            io.emit('productList', products);
-        } catch (error) {
-            console.error('Error al eliminar producto en MongoDB:', error);
-        }
-    });
+    if (req.user.role === "admin") {
+        return res.redirect("/realtimeproducts"); // Admin → Redirigir a realtimeproducts
+    }
+    return res.redirect("/catalog"); // Usuario normal → Redirigir a catalog
 });
 
-// Iniciar el servidor
+// Rutas de Vistas
+app.get('/catalog', (req, res) => res.render('catalog'));
+app.get('/realtimeproducts', (req, res) => res.render('realTimeProducts'));
+app.get('/login', (req, res) => res.render('login')); // Nueva ruta para /login
+// Ruta para renderizar la vista de registro
+app.get('/register', (req, res) => res.render('register'));
+
+// Vista para recuperación de contraseña
+app.get("/forgot-password", (req, res) => res.render("forgotPassword"));
+
+// Vista para restablecimiento de contraseña con token
+app.get("/reset-password/:token", (req, res) => {
+    res.render("resetPassword", { token: req.params.token });
+});
+
+// Servidor HTTP y Socket.IO
+const server = http.createServer(app);
+const io = new Server(server);
+require('./socket')(io); // Configuración separada de Socket.IO
+
+// Iniciar Servidor
 server.listen(PORT, () => {
-    console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
 });
-
-
-// (async () => {
-//     try {
-//         // Conectar a la base de datos
-//         await connectDB();
-//         console.log('Conectado a la base de datos.');
-
-//         // Actualizar contraseñas una sola vez
-//         console.log('Iniciando actualización de contraseñas...');
-//         await updatePasswords(User);
-//         console.log('Actualización de contraseñas completada.');
-
-//         // Iniciar el servidor después de la actualización
-//         app.listen(PORT, () => {
-//             console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
-//         });
-//     } catch (error) {
-//         console.error('Error durante la inicialización:', error);
-//         process.exit(1); // Salir en caso de error crítico
-//     }
-// })();

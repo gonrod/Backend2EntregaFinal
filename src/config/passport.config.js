@@ -1,6 +1,6 @@
 const passport = require('passport');
 const local = require( 'passport-local');
-const UserModel = require( '../models/User.js');
+const UserModel = require( '../dao/models/User.js');
 const { createHash, isValidPassword } = require( '../utils/passwordUtils.js');
 const { Strategy: JwtStrategy, ExtractJwt } = require('passport-jwt');
 

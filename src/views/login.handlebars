@@ -1,80 +1,47 @@
 <h2>Iniciar sesión</h2>
 
-<form action="/api/login" method="POST">
-    <input type="email" name="email" placeholder="Correo electrónico" required>
-    <input type="password" name="password" placeholder="Contraseña" required>
+<form id="loginForm">
+    <input type="email" id="email" name="email" placeholder="Correo electrónico" required>
+    <input type="password" id="password" name="password" placeholder="Contraseña" required>
     <button type="submit">Iniciar sesión</button>
 </form>
 
-<!-- Nuevo formulario para registrar usuario -->
-<div>
-    <input type="password" id="testPassword" placeholder="Contraseña para el nuevo usuario" required>
-    
-    <!-- Dropdown para seleccionar el rol -->
-    <select id="userRole">
-        <option value="user">Usuario</option>
-        <option value="admin">Administrador</option>
-    </select>
+<p id="loginError" style="color: red; display: none;">Correo o contraseña incorrectos.</p>
 
-    <button id="registerUserBtn">Registrar Usuario</button>
-</div>
-
-<!-- Contenedor para la tabla con información del usuario registrado -->
-<div id="userInfoTableContainer"></div>
+<hr>
+<p style="text-align: center; margin-top: 15px;">
+    ¿No tienes una cuenta? <a href="/register" style="color: #007bff; text-decoration: none; font-weight: bold;">Regístrate aquí</a>
+</p>
+<p style="text-align: center; margin-top: 10px;">
+    ¿Olvidaste tu contraseña? <a href="/forgot-password" style="color: #ff5733; text-decoration: none; font-weight: bold;">Recupérala aquí</a>
+</p>
 
 <script>
-    document.getElementById('registerUserBtn').addEventListener('click', async () => {
+    document.getElementById("loginForm").addEventListener("submit", async (event) => {
+        event.preventDefault(); // Evita el envío automático del formulario
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
         try {
-            const password = document.getElementById('testPassword').value;
-            const role = document.getElementById('userRole').value;
-
-            if (!password) {
-                alert('Por favor, ingresa una contraseña.');
-                return;
-            }
-
-            const response = await fetch('/api/users/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: 'user_' + Date.now() + '@example.com', // Email único
-                    first_name: 'Random',
-                    last_name: 'User',
-                    age: Math.floor(Math.random() * 50) + 18,
-                    password, 
-                    role  // Se envía el rol seleccionado
-                })
+            const response = await fetch("/api/sessions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
             });
 
-            if (!response.ok) throw new Error('Error al registrar el usuario');
             const result = await response.json();
-
-            console.log('Respuesta del servidor:', result); // Verificar datos aquí
-            const user = result.user;
-
-            // Actualizar el DOM para mostrar los datos en la tabla
-            const container = document.getElementById('userInfoTableContainer');
-            container.innerHTML = `
-                <table border="1">
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Apellido</th>
-                        <th>Email</th>
-                        <th>Edad</th>
-                        <th>Rol</th>
-                    </tr>
-                    <tr>
-                        <td>${user.first_name || 'N/A'}</td>
-                        <td>${user.last_name || 'N/A'}</td>
-                        <td>${user.email || 'N/A'}</td>
-                        <td>${user.age || 'N/A'}</td>
-                        <td>${user.role || 'N/A'}</td>
-                    </tr>
-                </table>
-            `;
+            
+            if (response.ok) {
+                console.log("✅ Login exitoso:", result);
+                window.location.href = "/catalog"; // Redirigir al catálogo después del login
+            } else {
+                console.error("❌ Error en login:", result);
+                document.getElementById("loginError").style.display = "block";
+            }
         } catch (error) {
-            console.error('Hubo un error:', error);
-            alert('Hubo un error al registrar el usuario');
+            console.error("❌ Error en la autenticación:", error);
+            alert("Hubo un error al iniciar sesión. Inténtalo de nuevo.");
         }
     });
 </script>
