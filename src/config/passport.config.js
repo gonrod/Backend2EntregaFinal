@@ -2,6 +2,7 @@ const passport = require('passport');
 const local = require( 'passport-local');
 const UserModel = require( '../models/User.js');
 const { createHash, isValidPassword } = require( '../utils/passwordUtils.js');
+const { Strategy: JwtStrategy, ExtractJwt } = require('passport-jwt');
 
 const LocalStrategy = local.Strategy;
 
@@ -66,6 +67,31 @@ function initializePassport() {
     ))
 
 };
+
+const cookieExtractor = (req) => {
+    let token = null;
+    if (req && req.cookies) {
+        token = req.cookies.tokenCookie; // Extract token from the cookie
+    }
+    return token;
+};
+
+const opts = {
+    jwtFromRequest: cookieExtractor, // Extract token from cookie
+    secretOrKey: process.env.JWT_SECRET, // Secret key to verify JWT
+};
+
+passport.use(new JwtStrategy(opts, async (jwt_payload, done) => {
+    try {
+        const user = await UserModel.findById(jwt_payload.id);
+        if (user) {
+            return done(null, user);
+        }
+        return done(null, false);
+    } catch (error) {
+        return done(error, false);
+    }
+}));
 
 module.exports = {
  initializePassport,   

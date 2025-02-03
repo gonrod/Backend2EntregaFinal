@@ -1,14 +1,35 @@
 <header>
-      <nav>
+    <nav>
         <div class="logo">🏪 Tienda</div>
         <ul class="menu">
             <li><a href="/products">Productos</a></li>
             <li><a href="/realtimeproducts">Productos en Tiempo Real</a></li>
         </ul>
-        <div class="cart-icon">
+        <div class="cart-icon" id="cart-icon">
             🛒 <span id="cart-count" class="cart-count">0</span>
         </div>
     </nav> 
-
-    <!-- Contenido específico de cada vista -->
 </header>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const cartIcon = document.getElementById("cart-icon");
+
+        try {
+            const response = await fetch("/api/carts/my-cart", {
+                method: "GET",
+                credentials: "include" // Permite el envío de cookies
+            });
+
+            if (!response.ok) {
+                throw new Error("Usuario no autenticado o sin carrito");
+            }
+
+            const data = await response.json();
+            console.log("✅ cartId recibido:", data.cartId);
+            cartIcon.setAttribute("data-cart-id", data.cartId);
+        } catch (error) {
+            console.error("⚠️ No se pudo obtener el cartId:", error);
+        }
+    });
+</script>

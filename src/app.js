@@ -54,11 +54,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Rutas de la API
-app.use('/api/products', productsRouter);
 app.use('/api/carts', cartsRouter);
 app.use('/api/users', userRouter); // Aseguramos incluir userRouter
 //app.use('/session', sessionRouter);
 app.use('/api/login', sessionRouter);
+
+//
+app.use('/catalog', productsRouter);
 
 
 //app.use('/', userRouter);
@@ -70,39 +72,39 @@ app.get('/realtimeproducts', (req, res) => {
 });
 
 // Ruta para renderizar la vista de productos con paginación y filtros
-app.get('/products', async (req, res) => {
-    try {
-        const { limit = 10, page = 1, sort, query } = req.query;
-        const filter = query ? { category: query } : {};
-        const sortOption = sort === 'asc' ? { price: 1 } : sort === 'desc' ? { price: -1 } : {};
-        const limitNum = parseInt(limit, 10);
-        const pageNum = parseInt(page, 10);
+// app.get('/products', async (req, res) => {
+//     try {
+//         const { limit = 10, page = 1, sort, query } = req.query;
+//         const filter = query ? { category: query } : {};
+//         const sortOption = sort === 'asc' ? { price: 1 } : sort === 'desc' ? { price: -1 } : {};
+//         const limitNum = parseInt(limit, 10);
+//         const pageNum = parseInt(page, 10);
 
-        const products = await Product.find(filter)
-            .sort(sortOption)
-            .skip((pageNum - 1) * limitNum)
-            .limit(limitNum);
+//         const products = await Product.find(filter)
+//             .sort(sortOption)
+//             .skip((pageNum - 1) * limitNum)
+//             .limit(limitNum);
 
-        const totalProducts = await Product.countDocuments(filter);
-        const totalPages = Math.ceil(totalProducts / limitNum);
+//         const totalProducts = await Product.countDocuments(filter);
+//         const totalPages = Math.ceil(totalProducts / limitNum);
 
-        res.render('index', {
-            products: products.map(product => product.toObject()),
-            totalPages,
-            prevPage: pageNum > 1 ? pageNum - 1 : null,
-            nextPage: pageNum < totalPages ? pageNum + 1 : null,
-            page: pageNum,
-            limit: limitNum,
-            sort,
-            query,
-            hasPrevPage: pageNum > 1,
-            hasNextPage: pageNum < totalPages,
-        });
-    } catch (error) {
-        console.error('Error al obtener productos:', error);
-        res.status(500).send('Error al cargar productos');
-    }
-});
+//         res.render('index', {
+//             products: products.map(product => product.toObject()),
+//             totalPages,
+//             prevPage: pageNum > 1 ? pageNum - 1 : null,
+//             nextPage: pageNum < totalPages ? pageNum + 1 : null,
+//             page: pageNum,
+//             limit: limitNum,
+//             sort,
+//             query,
+//             hasPrevPage: pageNum > 1,
+//             hasNextPage: pageNum < totalPages,
+//         });
+//     } catch (error) {
+//         console.error('Error al obtener productos:', error);
+//         res.status(500).send('Error al cargar productos');
+//     }
+// });
 
 // Configuración de Socket.IO
 io.on('connection', async (socket) => {
