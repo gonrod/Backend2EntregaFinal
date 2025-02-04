@@ -1,25 +1,30 @@
 const ProductDAO = require('../daos/ProductDAO');
 
 class ProductRepository {
-    async getAllProducts(filters = {}) {
+    static async getAllProducts() {
+        const products = await ProductDAO.getAllProducts();
+        return products;
+    }
+
+    static async getFilteredProducts(filters) {
         return await ProductDAO.getAllProducts(filters);
     }
 
-    async getProductById(productId) {
-        return await ProductDAO.getProductById(productId);
+    static async getProductById(id) {
+        return await ProductDAO.getProductById(id);
     }
 
-    async createProduct(productData) {
+    static async addProduct(productData) {
         return await ProductDAO.createProduct(productData);
     }
 
-    async updateProduct(productId, updateData) {
-        return await ProductDAO.updateProduct(productId, updateData);
+    static async updateProduct(id, productData) {
+        return await ProductDAO.updateProduct(id, productData)
     }
 
-    async deleteProduct(productId) {
-        return await ProductDAO.deleteProduct(productId);
+    static async deleteProduct(id) {
+        return await ProductDAO.deleteProduct(id)
     }
 }
 
-module.exports = new ProductRepository();
+module.exports = ProductRepository;

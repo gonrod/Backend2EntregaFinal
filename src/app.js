@@ -40,6 +40,10 @@ const hbs = create({
     extname: '.handlebars',
     defaultLayout: 'main',
     helpers: { eq: (a, b) => a === b },
+    runtimeOptions: {
+        allowProtoPropertiesByDefault: true,  // ✅ Permite acceder a propiedades en prototipos
+        allowProtoMethodsByDefault: true      // ✅ Permite acceder a métodos en prototipos (si es necesario)
+    }
 });
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
@@ -63,19 +67,23 @@ app.get("/", authenticateJWT, (req, res) => {
 });
 
 // Rutas de Vistas
-app.get('/catalog', (req, res) => res.render('catalog'));
-app.get('/realtimeproducts', (req, res) => res.render('realTimeProducts'));
-app.get('/login', (req, res) => res.render('login')); // Nueva ruta para /login
-// Ruta para renderizar la vista de registro
-app.get('/register', (req, res) => res.render('register'));
 
-// Vista para recuperación de contraseña
-app.get("/forgot-password", (req, res) => res.render("forgotPassword"));
+const viewsRouter = require("./routes/views.router"); // ✅ Importar el nuevo router
+app.use("/", viewsRouter);
 
-// Vista para restablecimiento de contraseña con token
-app.get("/reset-password/:token", (req, res) => {
-    res.render("resetPassword", { token: req.params.token });
-});
+// app.get('/catalog', (req, res) => res.render('catalog'));
+// app.get('/realtimeproducts', (req, res) => res.render('realTimeProducts'));
+// app.get('/login', (req, res) => res.render('login')); // Nueva ruta para /login
+// // Ruta para renderizar la vista de registro
+// app.get('/register', (req, res) => res.render('register'));
+
+// // Vista para recuperación de contraseña
+// app.get("/forgot-password", (req, res) => res.render("forgotPassword"));
+
+// // Vista para restablecimiento de contraseña con token
+// app.get("/reset-password/:token", (req, res) => {
+//     res.render("resetPassword", { token: req.params.token });
+// });
 
 // Servidor HTTP y Socket.IO
 const server = http.createServer(app);

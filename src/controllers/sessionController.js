@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const UserRepository = require('../dao/repositories/UserRepository'); // ✅ Ahora todo usa UserRepository
+const UserDTO = require('../dtos/UserDTO'); // ✅ Importar correctamente
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const Cart = require('../dao/models/Cart'); // Importar el modelo de carrito
@@ -82,37 +83,71 @@ const requestPasswordReset = async (req, res) => {
     }
 };
 
+// const postLogin = (req, res, next) => {
+//     passport.authenticate('login', { session: false }, async (err, user, info) => {
+//         if (err) return next(err);
+//         if (!user) return res.status(401).send({ message: info.message });
+
+//         try {
+//             // Verificar si el usuario es de tipo "user" y no tiene un carrito asignado
+//             if (user.role === "user" && !user.cart) {
+//                 console.log(`🛒 Usuario ${user.email} no tiene un carrito. Creando uno...`);
+//                 const newCart = new Cart({ user: user._id, products: [] });
+//                 await newCart.save();
+
+//                 // Asignar el carrito al usuario y guardar el usuario actualizado
+//                 await UserRepository.updateUser(user._id, { cart: newCart._id });
+//             }
+
+//             // Generar el token JWT
+//             const token = jwt.sign(
+//                 { id: user._id, email: user.email, role: user.role, cart: user.cart },
+//                 process.env.JWT_SECRET,
+//                 { expiresIn: process.env.JWT_EXPIRATION || "24h" }
+//             );
+
+//             console.log("✅ cartId asignado al usuario:", user.cart); // 🔍 Depuración
+
+//             res.cookie('tokenCookie', token, { httpOnly: true, maxAge: 60 * 60 * 1000 });
+            
+//             // ✅ Definir la URL de redirección según el rol
+//             const redirectUrl = user.role === "admin" ? "/realtimeproducts" : "/catalog";
+            
+//             res.status(200).json({ message: "Login exitoso", token, cartId: user.cart, redirectUrl });
+
+//         } catch (error) {
+//             console.error("❌ Error al asignar carrito al usuario:", error);
+//             res.status(500).json({ error: "Error interno del servidor" });
+//         }
+//     })(req, res, next);
+// };
+
 const postLogin = (req, res, next) => {
     passport.authenticate('login', { session: false }, async (err, user, info) => {
         if (err) return next(err);
         if (!user) return res.status(401).send({ message: info.message });
 
         try {
-            // Verificar si el usuario es de tipo "user" y no tiene un carrito asignado
             if (user.role === "user" && !user.cart) {
                 console.log(`🛒 Usuario ${user.email} no tiene un carrito. Creando uno...`);
                 const newCart = new Cart({ user: user._id, products: [] });
                 await newCart.save();
-
-                // Asignar el carrito al usuario y guardar el usuario actualizado
                 await UserRepository.updateUser(user._id, { cart: newCart._id });
             }
 
-            // Generar el token JWT
+            const userDTO = new UserDTO(user);
             const token = jwt.sign(
                 { id: user._id, email: user.email, role: user.role, cart: user.cart },
                 process.env.JWT_SECRET,
                 { expiresIn: process.env.JWT_EXPIRATION || "24h" }
             );
 
-            console.log("✅ cartId asignado al usuario:", user.cart); // 🔍 Depuración
-
+            console.log("✅ cartId asignado al usuario:", user.cart);
             res.cookie('tokenCookie', token, { httpOnly: true, maxAge: 60 * 60 * 1000 });
-            
-            // ✅ Definir la URL de redirección según el rol
+
             const redirectUrl = user.role === "admin" ? "/realtimeproducts" : "/catalog";
             
-            res.status(200).json({ message: "Login exitoso", token, cartId: user.cart, redirectUrl });
+            res.status(200).json({ message: "Login exitoso", token, user: userDTO, redirectUrl });
 
         } catch (error) {
             console.error("❌ Error al asignar carrito al usuario:", error);
@@ -141,6 +176,26 @@ const getCurrentSession = async (req, res) => {
     }
 };
 
+// const getCurrentSession = async (req, res) => {
+//     try {
+//         if (!req.user) {
+//             return res.status(401).json({ error: "No autenticado" }); // ✅ Enviar JSON en lugar de redirigir
+//         }
+
+//         res.status(200).json({
+//             user: {
+//                 first_name: req.user.first_name,
+//                 email: req.user.email,
+//                 role: req.user.role,
+//                 isAdmin: req.user.role === "admin"
+//             }
+//         });
+//     } catch (error) {
+//         console.error("Error obteniendo la sesión:", error);
+//         res.status(500).json({ error: "Error del servidor" });
+//     }
+// };
+
 const registerUser = async (req, res) => {
     try {
         console.log("📌 Datos recibidos en el servidor:", req.body);
@@ -151,19 +206,32 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
 
+        // ✅ Convertir la fecha de nacimiento en edad
+        const birthDate = new Date(age);
+        const today = new Date();
+        const calculatedAge = today.getFullYear() - birthDate.getFullYear();
+
         const existingUser = await UserRepository.getUserByEmail(email);
         if (existingUser) {
             return res.status(400).json({ error: "El correo ya está registrado" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await UserRepository.createUser({ first_name, last_name, email, password: hashedPassword, role, age });
+
+        const newUser = await UserRepository.createUser({
+            first_name,
+            last_name,
+            email,
+            password: hashedPassword,
+            role,
+            age: calculatedAge,
+        });
 
         return res.status(201).json({ message: "Usuario registrado exitosamente", redirectUrl: "/login" });
 
     } catch (error) {
         console.error("❌ Error en el registro:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
+        res.status(500).json({ error: "Error interno del servidor." });
     }
 };
 

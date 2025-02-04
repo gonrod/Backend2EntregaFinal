@@ -1,6 +1,12 @@
 const Product = require('../models/Product');
 
 class ProductDAO {
+
+    static async getAll() {
+        const products = await ProductModel.find();
+        return products;
+    }
+
     async getAllProducts(filters = {}) {
         try {
             return await Product.find(filters);

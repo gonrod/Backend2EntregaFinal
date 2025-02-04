@@ -11,7 +11,7 @@ fetch("/api/sessions/current", { credentials: "include" })
     });
 
     socket.on("productList", (products) => {
-        console.log("📦 Productos recibidos desde WebSockets:", products);
+        
         const productList = document.getElementById("productList");
     
         if (!productList) {

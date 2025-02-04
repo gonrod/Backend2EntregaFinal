@@ -22,4 +22,19 @@ router.get("/forgot-password", (req, res) => {
     res.render("forgotPassword"); // Renderiza la vista Handlebars
 });
 
+
+router.get('/current', authenticateJWT, (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: "Usuario no autenticado" });
+        }
+
+        const userDTO = new UserDTO(req.user); // ✅ Convertimos el usuario a DTO
+        res.json({ user: userDTO }); // 🔄 Retornamos solo la info necesaria
+    } catch (error) {
+        console.error("❌ Error en /current:", error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
+
 module.exports = router;

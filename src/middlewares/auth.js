@@ -25,60 +25,38 @@ const authenticateJWT = async (req, res, next) => {
         const token = req.cookies.tokenCookie;
         if (!token) {
             console.error("❌ No se encontró un token en las cookies.");
-            return res.redirect("/login"); // ✅ Redirigir a login si no hay token
+            return res.status(401).json({ error: "No autorizado, inicia sesión." }); // Respuesta JSON 
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await UserModel.findById(decoded.id);
         if (!user) {
             console.error("❌ Usuario no encontrado en la base de datos.");
-            return res.redirect("/login"); // ✅ Redirigir si el usuario no existe
+            return res.status(401).json({ error: "Usuario no encontrado, inicia sesión." }); 
         }
 
         req.user = user;
         next();
     } catch (error) {
         console.error("❌ Error en authenticateJWT:", error);
-        return res.redirect("/login"); // ✅ Redirigir si hay un error en el token
+        return res.status(403).json({ error: "Token inválido o expirado." }); // JSON con error específico
     }
 };
 
 
 
-const isAdmin = (req, res, next) => {
-    try {
-        const user = req.user; // Asegúrate de que `req.user` esté configurado (Passport o JWT)
-        if (!user) {
-            return res.status(401).json({ error: 'No autenticado' });
+const authorizeRoles = (...roles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ error: "No autenticado" });
         }
 
-        if (user.role !== 'admin') {
-            return res.status(403).json({ error: 'No autorizado' });
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ error: "No autorizado" });
         }
 
-        next(); // Usuario autorizado, continuar con la siguiente función
-    } catch (error) {
-        console.error('Error en la autorización:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
+        next();
+    };
 };
 
-const isUser = (req, res, next) => {
-    try {
-        const user = req.user; // Asegúrate de que `req.user` esté configurado (Passport o JWT)
-        if (!user) {
-            return res.status(401).json({ error: 'No autenticado' });
-        }
-
-        if (user.role !== 'user') {
-            return res.status(403).json({ error: 'No autorizado' });
-        }
-
-        next(); // Usuario autorizado, continuar con la siguiente función
-    } catch (error) {
-        console.error('Error en la autorización:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-};
-
-module.exports = { isAdmin, authenticateJWT };
+module.exports = { authorizeRoles, authenticateJWT };

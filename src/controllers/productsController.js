@@ -1,4 +1,5 @@
-const Product = require('../dao/models/Product');
+const ProductDTO = require('../dtos/ProductDTO');
+const ProductRepository = require('../dao/repositories/ProductRepository');
 
 // Función auxiliar para obtener los productos con filtros y paginación
 const getFilteredProducts = async ({ limit, page, sort, query }) => {
@@ -28,39 +29,41 @@ const getFilteredProducts = async ({ limit, page, sort, query }) => {
 // Obtener productos con paginación, filtros y ordenamiento
 const getProducts = async (req, res) => {
   try {
-    const { limit, page, sort, query } = req.query;
-    const { products, totalPages, pageNum } = await getFilteredProducts({ limit, page, sort, query });
+      const { limit, page, sort, query } = req.query;
+      const { products, totalPages, pageNum } = await ProductRepository.getFilteredProducts({ limit, page, sort, query });
 
-    res.json({
-      status: "success",
-      payload: products,
-      totalPages,
-      prevPage: pageNum > 1 ? pageNum - 1 : null,
-      nextPage: pageNum < totalPages ? pageNum + 1 : null,
-      page: pageNum,
-      hasPrevPage: pageNum > 1,
-      hasNextPage: pageNum < totalPages,
-      prevLink: pageNum > 1 ? `/api/products?limit=${limit}&page=${pageNum - 1}&sort=${sort}&query=${query}` : null,
-      nextLink: pageNum < totalPages ? `/api/products?limit=${limit}&page=${pageNum + 1}&sort=${sort}&query=${query}` : null
-    });
+      const productDTOs = products.map(product => new ProductDTO(product)); // ✅ Convertir a DTO
+
+      res.json({
+          status: "success",
+          payload: productDTOs,
+          totalPages,
+          prevPage: pageNum > 1 ? pageNum - 1 : null,
+          nextPage: pageNum < totalPages ? pageNum + 1 : null,
+          page: pageNum,
+          hasPrevPage: pageNum > 1,
+          hasNextPage: pageNum < totalPages,
+          prevLink: pageNum > 1 ? `/api/products?limit=${limit}&page=${pageNum - 1}&sort=${sort}&query=${query}` : null,
+          nextLink: pageNum < totalPages ? `/api/products?limit=${limit}&page=${pageNum + 1}&sort=${sort}&query=${query}` : null
+      });
   } catch (error) {
-    res.status(500).json({ status: "error", message: error.message });
+      console.error("❌ Error obteniendo productos:", error);
+      res.status(500).json({ error: "Error interno del servidor." });
   }
 };
 
 // Obtener un producto por su ID y renderizar la vista de detalles
 const getProductById = async (req, res) => {
-    const { pid } = req.params;
-    try {
-        const product = await Product.findById(pid);
-        if (!product) {
-            return res.status(404).send('Producto no encontrado');
-        }
-        res.render('productDetails', { product: product.toObject() });
-    } catch (error) {
-        console.error('Error al obtener el producto:', error);
-        res.status(500).send('Error al cargar el producto');
-    }
+  try {
+      const product = await ProductRepository.getProductById(req.params.pid);
+      if (!product) {
+          return res.status(404).json({ error: "Producto no encontrado" });
+      }
+      res.json(new ProductDTO(product)); // ✅ Convertimos a DTO antes de responder
+  } catch (error) {
+      console.error("❌ Error obteniendo producto:", error);
+      res.status(500).json({ error: "Error interno del servidor." });
+  }
 };
 // Agregar un nuevo producto
 const addProduct = async (req, res) => {
@@ -132,24 +135,14 @@ const deleteAllProducts = async (req, res) => {
 // Renderiza la vista de catálogo para los usuarios
 const renderCatalog = async (req, res) => {
   try {
-    const { limit, page, sort, query } = req.query;
-    const { products, totalPages, pageNum, limitNum } = await getFilteredProducts({ limit, page, sort, query });
+      const products = await ProductRepository.getAllProducts();
+      const cartId = req.user ? req.user.cart : null; // Asegurarse de pasar el cartId del usuario autenticado
+      console.log("🔹 Renderizando catálogo con cartId:", cartId);
 
-    res.render('catalog', {
-      products: products.map(product => product.toObject()),
-      totalPages,
-      prevPage: pageNum > 1 ? pageNum - 1 : null,
-      nextPage: pageNum < totalPages ? pageNum + 1 : null,
-      page: pageNum,
-      limit: limitNum,
-      sort,
-      query,
-      hasPrevPage: pageNum > 1,
-      hasNextPage: pageNum < totalPages,
-    });
+      res.render('catalog', { products, cartId });
   } catch (error) {
-    console.error('Error al obtener productos:', error);
-    res.status(500).send('Error al cargar productos');
+      console.error("Error renderizando catálogo:", error);
+      res.status(500).send("Error interno del servidor");
   }
 };
 

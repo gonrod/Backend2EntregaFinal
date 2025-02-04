@@ -12,16 +12,16 @@ const {
 } = require('../controllers/productsController');
 
 
-const { isAdmin, authenticateJWT } = require('../middlewares/auth'); // Importar isAdmin
+const { authenticateJWT, authorizeRoles } = require('../middlewares/auth'); // ✅ Reemplazar isAdmin por authorizeRoles
 
 // Endpoints para productos
 //router.get('/', getProducts); // Ruta para listar productos con filtros, paginación y ordenamiento
-router.get('/', authenticateJWT, isAdmin, renderCatalog);
+router.get('/', authenticateJWT, authorizeRoles("admin", "user"), renderCatalog); // Admins y usuarios pueden ver el catálogo
 router.get('/:pid', getProductById); // Ruta para ver los detalles de un producto específico
-router.post('/', isAdmin, addProduct); // Ruta para agregar un nuevo producto (solo admin)
-router.put('/:pid', isAdmin, updateProduct); // Ruta para actualizar un producto existente (solo admin)
-router.delete('/:pid', isAdmin, deleteProduct); // Ruta para eliminar un producto específico (solo admin)
-router.post('/generate', isAdmin, generateTestProducts); // Ruta para generar productos de prueba (solo admin)
-router.delete('/deleteAll', isAdmin, deleteAllProducts); // Ruta para eliminar todos los productos (solo admin)
+router.post('/', authenticateJWT, authorizeRoles("admin"), addProduct); //  Solo admin puede agregar productos
+router.put('/:pid', authenticateJWT, authorizeRoles("admin"), updateProduct); // Solo admin puede actualizar productos
+router.delete('/:pid', authenticateJWT, authorizeRoles("admin"), deleteProduct); // Solo admin puede eliminar productos
+router.post('/generate', authenticateJWT, authorizeRoles("admin"), generateTestProducts); //  Solo admin puede generar productos de prueba
+router.delete('/deleteAll', authenticateJWT, authorizeRoles("admin"), deleteAllProducts);
 
 module.exports = router;

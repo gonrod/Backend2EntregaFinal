@@ -16,6 +16,10 @@ class UserRepository {
     async updateUser(userId, updateData) {
         return await UserDAO.updateUser(userId, updateData);
     }
+
+    async getUserByResetToken(token) {
+        return await UserDAO.getUserByResetToken(token);
+    }
 }
 
 module.exports = new UserRepository();

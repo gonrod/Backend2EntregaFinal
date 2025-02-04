@@ -28,15 +28,6 @@ class UserDAO {
             throw error;
         }
     }
-
-    async updateUser(userId, updateData) {
-        try {
-            return await User.findByIdAndUpdate(userId, updateData, { new: true });
-        } catch (error) {
-            console.error("Error actualizando usuario:", error);
-            throw error;
-        }
-    }
 }
 
 module.exports = new UserDAO();
