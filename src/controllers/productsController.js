@@ -137,7 +137,6 @@ const renderCatalog = async (req, res) => {
   try {
       const products = await ProductRepository.getAllProducts();
       const cartId = req.user ? req.user.cart : null; // Asegurarse de pasar el cartId del usuario autenticado
-      console.log("🔹 Renderizando catálogo con cartId:", cartId);
 
       res.render('catalog', { products, cartId });
   } catch (error) {

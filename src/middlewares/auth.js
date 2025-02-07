@@ -25,7 +25,7 @@ const authenticateJWT = async (req, res, next) => {
         const token = req.cookies.tokenCookie;
         if (!token) {
             console.error("❌ No se encontró un token en las cookies.");
-            return res.status(401).json({ error: "No autorizado, inicia sesión." }); // Respuesta JSON 
+            return res.redirect('/login'); 
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);

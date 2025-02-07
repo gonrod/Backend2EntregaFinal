@@ -131,6 +131,7 @@ const postLogin = (req, res, next) => {
             if (user.role === "user" && !user.cart) {
                 console.log(`🛒 Usuario ${user.email} no tiene un carrito. Creando uno...`);
                 const newCart = new Cart({ user: user._id, products: [] });
+                console.log("✅ cartId asignado al usuario:", user.cart);
                 await newCart.save();
                 await UserRepository.updateUser(user._id, { cart: newCart._id });
             }
@@ -142,11 +143,10 @@ const postLogin = (req, res, next) => {
                 { expiresIn: process.env.JWT_EXPIRATION || "24h" }
             );
 
-            console.log("✅ cartId asignado al usuario:", user.cart);
+            console.log (user.role);
             res.cookie('tokenCookie', token, { httpOnly: true, maxAge: 60 * 60 * 1000 });
-
-            const redirectUrl = user.role === "admin" ? "/realtimeproducts" : "/catalog";
-            
+            const redirectUrl = user.role === "admin" ? "/admin-catalog" : "/catalog";
+            console.log (redirectUrl);
             res.status(200).json({ message: "Login exitoso", token, user: userDTO, redirectUrl });
 
         } catch (error) {

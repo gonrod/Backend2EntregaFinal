@@ -30,18 +30,17 @@
                 body: JSON.stringify({ email, password })
             });
 
-            const result = await response.json();
-            
-            if (response.ok) {
-                console.log("✅ Login exitoso:", result);
-                window.location.href = "/catalog"; // Redirigir al catálogo después del login
-            } else {
-                console.error("❌ Error en login:", result);
-                document.getElementById("loginError").style.display = "block";
+        const data = await response.json();
+
+                if (response.ok) {
+                    alert("✅ Inicio de sesión exitoso");
+                    window.location.href = data.redirectUrl; 
+                } else {
+                    alert(`❌ Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error("Error en el login:", error);
+                alert("❌ Error interno del servidor.");
             }
-        } catch (error) {
-            console.error("❌ Error en la autenticación:", error);
-            alert("Hubo un error al iniciar sesión. Inténtalo de nuevo.");
-        }
-    });
+        });
 </script>

@@ -61,14 +61,14 @@ app.get("/", authenticateJWT, (req, res) => {
         return res.redirect("/login"); // No autenticado → Redirigir a login
     }
     if (req.user.role === "admin") {
-        return res.redirect("/realtimeproducts"); // Admin → Redirigir a realtimeproducts
+        return res.redirect("/admin-catalog"); // Admin → Redirigir a realtimeproducts
     }
     return res.redirect("/catalog"); // Usuario normal → Redirigir a catalog
 });
 
 // Rutas de Vistas
 
-const viewsRouter = require("./routes/views.router"); // ✅ Importar el nuevo router
+const viewsRouter = require("./routes/views.router"); 
 app.use("/", viewsRouter);
 
 // app.get('/catalog', (req, res) => res.render('catalog'));

@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { postLogin, getCurrentSession, registerUser, requestPasswordReset, resetPassword } = require('../controllers/sessionController');
-const { authenticateJWT } = require('../middlewares/auth');
+const { authenticateJWT, authorizeRoles } = require('../middlewares/auth');
+
 
 // Ruta para login
 router.post('/', postLogin);
@@ -21,6 +22,8 @@ router.post('/forgot-password', requestPasswordReset);
 router.get("/forgot-password", (req, res) => {
     res.render("forgotPassword"); // Renderiza la vista Handlebars
 });
+
+router.get('/admin-catalog', authenticateJWT, authorizeRoles("admin"), (req, res) => res.render('realTimeProducts'));
 
 
 router.get('/current', authenticateJWT, (req, res) => {
