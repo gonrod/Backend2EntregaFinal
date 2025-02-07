@@ -206,7 +206,7 @@ const finalizePurchase = async (req, res) => {
         res.status(200).json({
             message: "✅ Compra realizada con éxito",
             ticket: newTicket,
-            unavailableProducts
+            purchasedProducts
         });
 
     } catch (error) {

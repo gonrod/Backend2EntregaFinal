@@ -76,9 +76,9 @@ document.getElementById("checkout-btn")?.addEventListener("click", async () => {
                 ticketTotalEl.textContent = `$${data.ticket.totalAmount}`;
                 ticketDateEl.textContent = new Date(data.ticket.purchaseDate).toLocaleString();
 
-                console.log("🛒 Productos recibidos:", data.ticket.products);
+                console.log("🛒 Productos recibidos:", data.purchasedProducts);
 
-                ticketProductsEl.innerHTML = data.ticket.products.map(p => {
+                ticketProductsEl.innerHTML = data.purchasedProducts.map(p => {
                     return `<li>${p.product?.title || "Producto desconocido"} (x${p.quantity})</li>`;
                 }).join("");
 
