@@ -23,5 +23,7 @@ router.get('/forgot-password', (req, res) => res.render('forgotPassword'));
 router.get('/reset-password/:token', (req, res) => {
     res.render('resetPassword', { token: req.params.token });
 });
-
+router.get('/admin-catalog', authenticateJWT, authorizeRoles("admin"), (req, res) => {
+    res.render('realTimeProducts');
+});
 module.exports = router;
