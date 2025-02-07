@@ -10,11 +10,17 @@ const passport = require('passport');
 const cookieParser = require('cookie-parser');
 const { authenticateJWT } = require('./middlewares/auth');
 
+
+const EventEmitter = require('events');
+EventEmitter.defaultMaxListeners = 20;
+
 // Importar Rutas
 const userRouter = require('./routes/user.router');
 const sessionRouter = require('./routes/session.router');
 const productsRouter = require('./routes/productsRouter');
 const cartsRouter = require('./routes/cartsRouter');
+const ticketRouter = require('./routes/ticketsRouter');
+
 
 // Inicializar Express
 const app = express();
@@ -54,6 +60,9 @@ app.use('/api/carts', cartsRouter);
 app.use('/api/users', userRouter);
 app.use('/api/sessions', sessionRouter);
 app.use('/api/products', productsRouter);
+
+app.use('/api/tickets', ticketRouter);
+
 
 // Redirección Automática en `/`
 app.get("/", authenticateJWT, (req, res) => {

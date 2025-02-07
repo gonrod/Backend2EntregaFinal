@@ -23,6 +23,7 @@ fetch("/api/sessions/current", { credentials: "include" })
             <li>
                 <strong>${p.title}</strong> - $${p.price}
                 <p>${p.description}</p>
+                <button onclick="editProduct('${p._id}', '${p.title}', '${p.description}', '${p.price}', '${p.stock}', '${p.category}')">✏ Editar</button>
                 <button onclick="deleteProduct('${p._id}')">🗑 Eliminar</button>
             </li>
         `).join('');
@@ -72,7 +73,32 @@ function addProduct() {
 }
 
 function deleteProduct(productId) {
-    socket.emit("deleteProduct", productId);
+    const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.");
+
+    if (confirmDelete) {
+        socket.emit("deleteProduct", productId);
+    }
+}
+
+function editProduct(productId, title, description, price, stock, category) {
+    const newTitle = prompt("Nuevo título:", title);
+    const newDescription = prompt("Nueva descripción:", description);
+    const newPrice = prompt("Nuevo precio:", price);
+    const newStock = prompt("Nuevo stock:", stock);
+    const newCategory = prompt("Nueva categoría:", category);
+
+    if (newTitle && newDescription && newPrice && newStock && newCategory) {
+        socket.emit("updateProduct", {
+            productId,
+            updates: {
+                title: newTitle,
+                description: newDescription,
+                price: parseFloat(newPrice),
+                stock: parseInt(newStock),
+                category: newCategory
+            }
+        });
+    }
 }
 
 socket.on("error", (message) => {

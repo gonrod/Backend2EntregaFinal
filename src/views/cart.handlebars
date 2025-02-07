@@ -37,76 +37,85 @@
         </div>
     {{/if}}
 
+
+<div id="ticket-container" style="display:none; margin-top: 20px; border: 1px solid black; padding: 10px;">
+    <h2>🎟 Ticket de Compra</h2>
+    <p><strong>Código:</strong> <span id="ticket-code"></span></p>
+    <p><strong>Total:</strong> <span id="ticket-total"></span></p>
+    <p><strong>Fecha:</strong> <span id="ticket-date"></span></p>
+    <h3>Productos Comprados:</h3>
+    <ul id="ticket-products"></ul>
+</div>
     {{> footer}}
 
 <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-        let cartIcon = document.getElementById("cart-icon");
+document.getElementById("checkout-btn")?.addEventListener("click", async () => {
+    const cartId = "{{cart._id}}";
 
-        // Esperar hasta que `cartId` esté disponible
-        const waitForCartId = async () => {
-            return new Promise(resolve => {
-                const checkCartId = () => {
-                    const cartId = cartIcon.getAttribute("data-cart-id");
-                    if (cartId && cartId !== "undefined" && cartId !== "null") {
-                        console.log("✅ Cart ID obtenido:", cartId);
-                        resolve(cartId);
-                    } else {
-                        setTimeout(checkCartId, 100);
-                    }
-                };
-                checkCartId();
-            });
-        };
-
-        let cartId = await waitForCartId();
-
-        if (!cartId) {
-            console.error("⚠️ No se pudo obtener el cartId del usuario.");
-            alert("Debes iniciar sesión para ver tu carrito.");
-            return;
-        }
-
-        const updateCartTotals = () => {
-            let subtotal = 0;
-            let totalItems = 0;
-            document.querySelectorAll(".cart-item").forEach(item => {
-                const price = parseFloat(item.querySelector("p:nth-of-type(1)").textContent.replace("Precio: $", ""));
-                const quantity = parseInt(item.querySelector(".quantity").textContent);
-                subtotal += price * quantity;
-                totalItems += quantity;
-            });
-            document.getElementById("subtotal").textContent = `$${subtotal.toFixed(2)}`;
-            document.getElementById("total-items").textContent = totalItems;
-        };
-
-        updateCartTotals();
-
-        // Manejar eventos de "Eliminar del carrito"
-        document.querySelectorAll(".remove-from-cart-btn").forEach(button => {
-            button.addEventListener("click", async (event) => {
-                const productId = event.target.getAttribute("data-product-id");
-
-                try {
-                    const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
-                        method: "DELETE",
-                        credentials: "include"
-                    });
-
-                    if (response.status === 200) {
-                        alert("✅ Producto eliminado del carrito.");
-                        document.getElementById(`cart-item-${productId}`).remove();
-                        updateCartTotals();
-                    } else {
-                        throw new Error("No se pudo eliminar el producto");
-                    }
-                } catch (error) {
-                    console.error("❌ Error al eliminar producto:", error);
-                    alert("No se pudo eliminar el producto del carrito.");
-                }
-            });
+    try {
+        const response = await fetch(`/api/carts/${cartId}/purchase`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
         });
-    });
+        const data = await response.json();
+
+        console.log("📌 Respuesta de la API de compra:", data);
+
+        if (data.error) {
+            alert("❌ No se pudo completar la compra: " + data.error);
+        } else {
+            alert("✅ Compra realizada con éxito. Código de Ticket: " + data.ticket.code);
+
+            const ticketCodeEl = document.getElementById("ticket-code");
+            const ticketTotalEl = document.getElementById("ticket-total");
+            const ticketDateEl = document.getElementById("ticket-date");
+            const ticketProductsEl = document.getElementById("ticket-products");
+
+            if (ticketCodeEl && ticketTotalEl && ticketDateEl && ticketProductsEl) {
+                ticketCodeEl.textContent = data.ticket.code;
+                ticketTotalEl.textContent = `$${data.ticket.totalAmount}`;
+                ticketDateEl.textContent = new Date(data.ticket.purchaseDate).toLocaleString();
+
+                console.log("🛒 Productos recibidos:", data.ticket.products);
+
+                ticketProductsEl.innerHTML = data.ticket.products.map(p => {
+                    return `<li>${p.product?.title || "Producto desconocido"} (x${p.quantity})</li>`;
+                }).join("");
+
+                document.getElementById("ticket-container").style.display = "block";
+                document.getElementById("cart-container").style.display = "none";
+                document.getElementById("cart-summary").style.display = "none";
+            } else {
+                console.error("❌ No se encontraron los elementos del ticket en el DOM.");
+            }
+        }
+    } catch (error) {
+        console.error("❌ Error en la compra:", error);
+        alert("No se pudo completar la compra.");
+    }
+});
+
+// Función para eliminar productos del carrito
+async function removeFromCart(productId) {
+    const cartId = "{{cart._id}}";
+
+    try {
+        const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" }
+        });
+        const data = await response.json();
+
+        if (data.error) {
+            alert("❌ No se pudo eliminar el producto.");
+        } else {
+            alert("✅ Producto eliminado del carrito.");
+            window.location.reload();
+        }
+    } catch (error) {
+        console.error("❌ Error eliminando producto:", error);
+    }
+}
 </script>
 
 </body>

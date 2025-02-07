@@ -1,4 +1,5 @@
 const CartRepository = require('../dao/repositories/CartRepository');
+const TicketRepository = require('../dao/repositories/TicketRepository');
 const ProductRepository = require('../dao/repositories/ProductRepository');
 const Ticket = require('../dao/models/Ticket');
 
@@ -57,7 +58,11 @@ const getCartView = async (req, res) => {
             return res.status(401).json({ error: "No autenticado" });
         }
 
-        const cart = await CartRepository.getCartById(user._id);
+        if (!user.cart) {
+            return res.render("cart", { cart: null, emptyCart: true });
+        }
+
+        const cart = await CartRepository.getCartById(user.cart);
         if (!cart || cart.products.length === 0) {
             return res.render("cart", { cart: null, emptyCart: true });
         }
@@ -67,7 +72,7 @@ const getCartView = async (req, res) => {
         console.error("❌ Error al cargar carrito:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
-};
+}
 
 // Agregar un producto a un carrito
 const addProductToCart = async (req, res) => {
@@ -138,6 +143,78 @@ const checkoutCart = async (req, res) => {
     }
 };
 
+const finalizePurchase = async (req, res) => {
+    try {
+        const { cid } = req.params;
+        const user = req.user;
+
+        // Obtener el carrito del usuario
+        const cart = await CartRepository.getCartById(cid);
+        if (!cart || cart.products.length === 0) {
+            return res.status(400).json({ error: "El carrito está vacío" });
+        }
+
+        let totalAmount = 0;
+        let purchasedProducts = [];
+        let unavailableProducts = [];
+
+        for (const item of cart.products) {
+            const product = await ProductRepository.getProductById(item.product._id);
+
+            if (product) {
+                console.log("📌 Producto recuperado:", product); // Depuración
+
+                if (product.stock >= item.quantity) {
+                    // Restar stock y agregar a la compra
+                    product.stock -= item.quantity;
+                    await ProductRepository.updateProduct(product._id, { stock: product.stock });
+
+                    purchasedProducts.push({
+                        product: {
+                            _id: product._id,
+                            title: product.title || "Sin nombre",
+                            price: product.price || 0  
+                        },
+                        quantity: item.quantity
+                    });
+
+                    totalAmount += product.price * item.quantity;
+                } else {
+                    unavailableProducts.push({ product: product.title, available: product.stock });
+                }
+            } else {
+                console.error("❌ Producto no encontrado en la BD para ID:", item.product._id);
+            }
+        }
+
+        if (purchasedProducts.length === 0) {
+            return res.status(400).json({ error: "No hay suficiente stock para completar la compra", unavailableProducts });
+        }
+
+        // Generar el ticket
+        const newTicket = await TicketRepository.createTicket({
+            code: `T-${Date.now()}`,
+            user: user._id,
+            products: purchasedProducts,
+            totalAmount,
+            purchaseDate: new Date()
+        });
+
+        // Vaciar completamente el carrito después de la compra
+        await CartRepository.clearCart(cid);
+
+        res.status(200).json({
+            message: "✅ Compra realizada con éxito",
+            ticket: newTicket,
+            unavailableProducts
+        });
+
+    } catch (error) {
+        console.error("❌ Error en la compra:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+};
+
 module.exports = {
     getCartById,
     createCart,
@@ -145,5 +222,6 @@ module.exports = {
     getCartView,
     addProductToCart,
     removeProductFromCart,
-    checkoutCart
+    checkoutCart,
+    finalizePurchase
 };

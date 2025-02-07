@@ -58,6 +58,23 @@ class CartRepository {
             throw error;
         }
     }
+
+
+    async clearCart(cartId) {
+        try {
+            const cart = await CartDAO.getCartById(cartId);
+            if (!cart) throw new Error("Carrito no encontrado");
+    
+            cart.products = []; // Vaciar el carrito completamente
+            await cart.save();
+            console.log("✅ Carrito vaciado después de la compra.");
+            return cart;
+        } catch (error) {
+            console.error("❌ Error en clearCart:", error);
+            throw error;
+        }
+    }
+    
 }
 
 module.exports = new CartRepository();

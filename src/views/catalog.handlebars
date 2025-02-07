@@ -60,66 +60,67 @@
     {{> footer}}
 
     <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-        let cartIcon = document.getElementById("cart-icon");
+document.addEventListener("DOMContentLoaded", async () => {
+    let cartIcon = document.getElementById("cart-icon");
 
-        // Esperar hasta que `cartId` esté disponible en `cart-icon`
-        const waitForCartId = async () => {
-            return new Promise(resolve => {
-                const checkCartId = () => {
-                    const cartId = cartIcon.getAttribute("data-cart-id");
-                    if (cartId && cartId !== "undefined" && cartId !== "null") {
-                        console.log("✅ cartId detectado en catalog:", cartId);
-                        resolve(cartId);
-                    } else {
-                        setTimeout(checkCartId, 100);
-                    }
-                };
-                checkCartId();
-            });
-        };
-
-        let cartId = await waitForCartId();
-
-        if (!cartId) {
-            console.error("⚠️ No se pudo obtener el cartId del usuario.");
-            alert("Debes iniciar sesión para agregar productos al carrito.");
-            return;
+    // Obtener el cartId del usuario autenticado
+    const getCartId = async () => {
+        try {
+            const response = await axios.get("/api/carts/my-cart");
+            return response.data.cartId;
+        } catch (error) {
+            console.error("❌ Error obteniendo el cartId:", error);
+            return null;
         }
+    };
 
-        const cartCountElement = document.getElementById("cart-count");
-        let cartCount = 0;
+    let cartId = await getCartId();
 
-        const updateCartCount = async () => {
+    if (!cartId) {
+        console.error("⚠️ No se pudo obtener el cartId del usuario.");
+        alert("Debes iniciar sesión para agregar productos al carrito.");
+        return;
+    }
+
+    const cartCountElement = document.getElementById("cart-count");
+    let cartCount = 0;
+
+    const updateCartCount = async () => {
+        try {
+            const response = await axios.get(`/api/carts/${cartId}`);
+            cartCount = response.data.products.length;
+            cartCountElement.textContent = cartCount;
+        } catch (error) {
+            console.error("❌ Error al obtener el carrito:", error.response ? error.response.data : error);
+        }
+    };
+
+    await updateCartCount();
+
+    // Manejar eventos de "Agregar al carrito"
+    document.querySelectorAll(".add-to-cart-btn").forEach(button => {
+        button.addEventListener("click", async (event) => {
+            const productId = event.target.getAttribute("data-product-id");
+            console.log(`🛒 Intentando añadir producto ${productId} al carrito ${cartId}`);
+
             try {
-                const response = await axios.get(`/api/carts/${cartId}`);
-                cartCount = response.data.products.length;
-                cartCountElement.textContent = cartCount;
-            } catch (error) {
-                console.error("❌ Error al obtener el carrito:", error.response ? error.response.data : error);
-            }
-        };
+                const response = await axios.post(`/api/carts/${cartId}/product/${productId}`);
 
-        await updateCartCount();
-
-        // Manejar eventos de "Agregar al carrito"
-        document.querySelectorAll(".add-to-cart-btn").forEach(button => {
-            button.addEventListener("click", async (event) => {
-                const productId = event.target.getAttribute("data-product-id");
-                try {
-                    const response = await axios.post(`/api/carts/${cartId}/product/${productId}`);
-                    if (response.status === 201) {
-                        cartCount++;
-                        cartCountElement.textContent = cartCount;
-                        alert("✅ Producto añadido al carrito.");
-                    }
-                } catch (error) {
-                    console.error("❌ Error al agregar producto:", error.response ? error.response.data : error);
+                if (response.status === 201) {
+                    cartCount++;
+                    cartCountElement.textContent = cartCount;
+                    alert("✅ Producto añadido al carrito.");
+                } else {
+                    console.warn("⚠️ Respuesta inesperada:", response);
                     alert("No se pudo añadir el producto al carrito.");
                 }
-            });
+            } catch (error) {
+                console.error("❌ Error al agregar producto:", error.response ? error.response.data : error);
+                alert("No se pudo añadir el producto al carrito.");
+            }
         });
     });
+});
     </script>
 </body>
 </html>

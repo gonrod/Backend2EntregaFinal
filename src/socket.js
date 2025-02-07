@@ -37,19 +37,22 @@ module.exports = (io) => {
 
         // SOLO ADMIN: Actualizar producto existente
         socket.on('updateProduct', async ({ productId, updates }) => {
+            console.log("🛠 Verificando permisos en el socket para editar:", socket.user);
+        
             if (!socket.user || socket.user.role !== 'admin') {
                 return socket.emit('error', '⚠ No tienes permisos para actualizar productos.');
             }
-
+        
             try {
-                await Product.findByIdAndUpdate(productId, updates);
+                await Product.findByIdAndUpdate(productId, updates, { new: true }); // 🔥 Actualiza el producto en la base de datos
                 const products = await Product.find();
-                io.emit('productList', products);
+                io.emit('productList', products); // 🔄 Envía la lista actualizada de productos a todos los clientes
                 console.log(`✏ Producto actualizado por ${socket.user.email}:`, productId);
             } catch (error) {
                 console.error('❌ Error actualizando producto:', error);
             }
         });
+        
 
         // SOLO ADMIN: Eliminar producto
         socket.on('deleteProduct', async (productId) => {
